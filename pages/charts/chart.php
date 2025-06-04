@@ -561,7 +561,7 @@
                 <p class="text-muted">Lütfen bekleyiniz, veriler işleniyor.</p>
                 <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" id="loadingProgress" 
-                         style="width: 0%"></div>
+                        style="width: 0%"></div>
                 </div>
             </div>
         </div>

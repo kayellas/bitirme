@@ -99,22 +99,14 @@
     
               </li>
     
-              <li class="nav-item">
+              <li class="nav-item menu-open">
                 <a href="pages/charts/chart.php" class="nav-link">
-                  <i class="nav-icon fas fa-chart-pie"></i>
+                  <i class="nav-icon fas fa-tachometer-alt"></i>
                   <p>
                     Grafikler
                     <i class="right fas fa-angle-left"></i>
                   </p>
                 </a>
-                <ul class="nav nav-treeview">
-                  <li class="nav-item">
-                    <a href="../kds/pages/charts/chart.php" class="nav-link">
-                      <i class="far fa-circle nav-icon"></i>
-                      <p>ChartJS</p>
-                    </a>
-                  </li>
-                </ul>
               </li>
     
               <li class="nav-item">
