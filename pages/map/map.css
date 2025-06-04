@@ -1,0 +1,108 @@
+/* Genel sayfa düzeni */
+body {
+    display: flex;
+    flex-direction: column-reverse;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Üst kısım (Harita ve Firma Bilgileri) */
+.top-container {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    height: 60vh;
+    gap: 20px; /* Harita ve tablo arasındaki boşluk */
+    padding: 10px;
+}
+
+/* Sol taraf (Harita) */
+#map {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    border: 2px solid #ccc; /* Harita çevresine çerçeve ekledim */
+    
+}
+.container{
+    height: 1000px; /* Ekran yüksekliği kadar yapar */
+    
+    
+}
+
+/* Sağ taraf (Firma Bilgileri Tablosu) */
+#data-container {
+    width: 50%;
+    height: 100%;
+    padding: 1px;
+    overflow-y: auto;
+    background-color: #f4f4f4;
+    border: 2px solid #ccc; /* Tablo çevresine çerçeve ekledim */
+    box-sizing: border-box;
+}
+.data-container {
+    width: 100%;
+    height: 100%;
+    padding: 1px;
+    overflow-y: hidden;
+    background-color: #f4f4f4;
+    border: 2px solid #ccc; /* Tablo çevresine çerçeve ekledim */
+    box-sizing: border-box;
+}
+
+
+/* Firma Bilgileri Tablosu */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 2px solid #ddd;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+.data-row:hover {
+    background-color: #e0e0e0;
+}
+
+/* Alt kısım (Firma Bilgileri Tablosu) */
+.bottom-container {
+    width: 100%;  /* Tam genişlik */
+    height: 100%; /* Tam ekran yüksekliği */
+    display: flex;
+    justify-content: right; /* İçeriği ortalar */
+    align-items: right; /* Dikeyde ortalar */
+}
+
+/* Alt tablonun düzeni */
+#stok-table {
+    
+    width: 100%;
+    height: 100%;
+    background: white;
+    border: 2px solid #ccc; /* Alt tablonun çevresine çerçeve ekledim */
+}
+
+#stok-table, th, td {
+    border: 2px solid #ccc;
+}
+
+th {
+    background-color: #ddd;
+}
+
+td {
+    text-align: center;
+}
