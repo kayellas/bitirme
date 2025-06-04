@@ -557,57 +557,22 @@ body {
           </li>
 
           <li class="nav-item">
-            <a href="#" class="nav-link">
+            <a href="pages/charts/chart.php" class="nav-link">
               <i class="nav-icon fas fa-chart-pie"></i>
-              <p>
-                Grafikler
-                <i class="right fas fa-angle-left"></i>
-              </p>
+              <p>Grafikler</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="pages/charts/chart.php" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>ChartJS</p>
-                </a>
-              </li>
-            </ul>
           </li>
-
           <li class="nav-item">
-            <a href="#" class="nav-link">
+            <a href="pages/tables/data.php" class="nav-link">
               <i class="nav-icon fas fa-table"></i>
-              <p>
-                Tablolar
-                <i class="fas fa-angle-left right"></i>
-              </p>
+              <p>Database</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="pages/tables/data.php" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>DataTables</p>
-                </a>
-              </li>
-            </ul>
           </li>
-
           <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-map-marker-alt"></i>
-              <p>
-                Lokasyon Bazlı Firma
-                <i class="right fas fa-angle-left"></i>
-              </p>
+            <a href="pages/map/map.php" class="nav-link">
+              <i class="nav-icon fas fa-map-marked-alt"></i>
+              <p>Lokasyon Bazlı Bilgi</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="pages/map/map.php" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>MAP</p>
-                </a>
-              </li>
-            </ul>
           </li>
         </ul>
       </nav>
@@ -620,12 +585,12 @@ body {
       <div class="container-fluid">
         <div class="row mb-2">
           <div class="col-sm-6">
-            <h1 class="m-0">Executive Dashboard</h1>
+            <h1 class="m-0">Swiss Hotel Dashboard</h1>
           </div>
           <div class="col-sm-6">
             <ol class="breadcrumb float-sm-right">
               <li class="breadcrumb-item"><a href="index.php">Anasayfa</a></li>
-              <li class="breadcrumb-item active">EXECUTIVE DASHBOARD</li>
+              <li class="breadcrumb-item active">DASHBOARD</li>
             </ol>
           </div>
         </div>

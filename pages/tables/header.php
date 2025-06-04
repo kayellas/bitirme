@@ -115,71 +115,29 @@
               <i class="nav-icon fas fa-tachometer-alt"></i>
               <p>
                 Dashboard
-                <i class="right fas fa-angle-left"></i>
+                <i class="right fas"></i>
               </p>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a href="../charts/chart.php" class="nav-link">
+              <i class="nav-icon fas fa-chart-pie"></i>
+              <p>Grafikler</p>
             </a>
           </li>
           <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-chart-pie"></i>
-              <p>
-                Grafikler
-                <i class="right fas fa-angle-left"></i>
-              </p>
-            </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="../charts/chart.php" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>ChartJS</p>
-                </a>
-              </li>
-            </ul>
-          </li>
-          <li class="nav-item menu-open">
-            <a href="#" class="nav-link active">
+            <a href="../tables/data.php" class="nav-link active">
               <i class="nav-icon fas fa-table"></i>
-              <p>
-                Tablolar
-                <i class="fas fa-angle-left right"></i>
-              </p>
+              <p>Database</p>
             </a>
-              <li class="nav-item">
-                <a href="../tables/data.php" class="nav-link active">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>DataTables</p>
-                </a>
-              </li>
           </li>
-
           <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-chart-pie"></i>
-              <p>
-                Lokasyon Bazlı Firma
-                <i class="right fas fa-angle-left"></i>
-              </p>
+            <a href="../map/map.php" class="nav-link">
+              <i class="nav-icon fas fa-map-marked-alt"></i>
+              <p>Lokasyon Bazlı Bilgi</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="../map/map.php" class="nav-link">
-                <i class="far fa-circle nav-icon"></i>
-                <p>MAP</p>
-
-                </a>
-              </li>
-            </ul>
           </li>
-
-<!--           <li class="nav-item">
-            <a href="../../urunekle.html" class="nav-link">
-              <i class="nav-icon fas fa-chart-pie"></i>
-              <p>
-                Ürün Ekle
-                <i class="right fas fa-angle-left"></i>
-              </p>
-            </a>
-          </li> -->
         </ul>
       </nav>
       <!-- /.sidebar-menu -->

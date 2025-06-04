@@ -106,3 +106,27 @@ th {
 td {
     text-align: center;
 }
+
+/* Legend marker stilleri */
+.legend-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 4px 0;
+}
+
+.legend-text {
+    font-weight: 500;
+    color: #34495e;
+    font-size: 13px;
+}

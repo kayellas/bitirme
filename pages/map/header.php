@@ -89,56 +89,41 @@
             </a>
           </li>
           <li class="nav-item menu">
-            <a href="#" class="nav-link ">
+            <a href="../charts/chart.php" class="nav-link ">
               <i class="nav-icon fas fa-chart-pie"></i>
               <p>
                 Grafikler
-                <i class="right fas fa-angle-left"></i>
+                <i class="right fas"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview">
+            <!-- <ul class="nav nav-treeview">
               <li class="nav-item">
                 <a href="../charts/chart.php" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>ChartJS</p>
                 </a>
               </li>
-            </ul>
+            </ul> -->
           </li>
         
           <class="nav-item">
-            <a href="#" class="nav-link">
+            <a href="../tables/data.php" class="nav-link">
               <i class="nav-icon fas fa-table"></i>
               <p>
-                Tablolar
-                <i class="fas fa-angle-left right"></i>
+                Database
+                <i class="fas fas"></i>
               </p>
             </a>
-              <li class="nav-item">
-                <a href="../tables/data.php" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>DataTables</p>
-                </a>
-              </li>
           </li>
 
-          <li class="nav-item menu-open">
+          <li class="nav-item">
             <a href="#" class="nav-link active">
               <i class="nav-icon fas fa-chart-pie"></i>
               <p>
-                Lokasyon Bazlı Firma
-                <i class="right fas fa-angle-left"></i>
+                Lokasyon Bazlı Bilgi
+                <i class="right fas"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="../map/map.php" class="nav-link active">
-                <i class="far fa-circle nav-icon"></i>
-                <p>MAP</p>
-
-                </a>
-              </li>
-            </ul>
           </li>
 
 

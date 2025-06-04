@@ -423,7 +423,7 @@
         <!-- Executive Charts Row 3 -->
         <div class="row mb-4">
             <!-- Financial Performance -->
-            <div class="col-lg-8">
+            <div class="col-lg-6">
                 <div class="card card-purple card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -446,7 +446,7 @@
             </div>
 
             <!-- Supply Chain Metrics -->
-            <div class="col-lg-4">
+            <div class="col-lg-3">
                 <div class="card card-dark card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -461,6 +461,74 @@
                     </div>
                     <div class="card-body">
                         <canvas id="supplyChainChart" style="height: 400px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compact Performance Table -->
+            <div class="col-lg-3">
+                <div class="card card-info card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-table mr-2"></i>
+                            Performans Özeti
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-2" style="height: 400px; overflow-y: auto;">
+                        <div class="table-responsive">
+                            <table id="performanceTable" class="table table-sm table-striped">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th style="font-size: 0.75rem;">Metrik</th>
+                                        <th style="font-size: 0.75rem;">2024</th>
+                                        <th style="font-size: 0.75rem;">2025</th>
+                                        <th style="font-size: 0.75rem;">Değişim</th>
+                                        <th style="font-size: 0.75rem;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="performanceTableBody">
+                                    <!-- Dynamic data will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Additional KPI Summary Cards -->
+                        <div class="mt-3">
+                            <div class="small-box bg-gradient-success mb-2" style="border-radius: 8px;">
+                                <div class="inner p-2">
+                                    <h6 class="mb-1" style="font-size: 0.8rem;">Toplam Büyüme</h6>
+                                    <h4 id="totalGrowthRate" style="font-size: 1.2rem;">+12.5%</h4>
+                                </div>
+                                <div class="icon" style="top: 5px; right: 5px;">
+                                    <i class="fas fa-arrow-up" style="font-size: 1rem;"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="small-box bg-gradient-info mb-2" style="border-radius: 8px;">
+                                <div class="inner p-2">
+                                    <h6 class="mb-1" style="font-size: 0.8rem;">En İyi Çeyrek</h6>
+                                    <h4 style="font-size: 1.2rem;">Q1 2025</h4>
+                                </div>
+                                <div class="icon" style="top: 5px; right: 5px;">
+                                    <i class="fas fa-trophy" style="font-size: 1rem;"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="small-box bg-gradient-warning mb-2" style="border-radius: 8px;">
+                                <div class="inner p-2">
+                                    <h6 class="mb-1" style="font-size: 0.8rem;">Hedef Başarı</h6>
+                                    <h4 style="font-size: 1.2rem;">87%</h4>
+                                </div>
+                                <div class="icon" style="top: 5px; right: 5px;">
+                                    <i class="fas fa-bullseye" style="font-size: 1rem;"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -485,29 +553,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <canvas id="comparativeChart" style="height: 450px;"></canvas>
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="table-responsive">
-                                    <table id="performanceTable" class="table table-striped table-hover">
-                                        <thead class="thead-dark">
-                                            <tr>
-                                                <th>Metrik</th>
-                                                <th>2022</th>
-                                                <th>2023</th>
-                                                <th>2024</th>
-                                                <th>2025 (YTD)</th>
-                                                <th>YoY Değişim</th>
-                                                <th>Trend</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="performanceTableBody">
-                                            <!-- Dynamic data will be inserted here -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                        <canvas id="comparativeChart" style="height: 400px;"></canvas>
                     </div>
                 </div>
             </div>
@@ -561,7 +607,7 @@
                 <p class="text-muted">Lütfen bekleyiniz, veriler işleniyor.</p>
                 <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" id="loadingProgress" 
-                        style="width: 0%"></div>
+                         style="width: 0%"></div>
                 </div>
             </div>
         </div>
@@ -779,9 +825,10 @@ const advancedChartConfig = {
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing charts...');
     initializeAdvancedCharts();
-    loadDashboardData();
     setDefaultDates();
+    loadDashboardData();
     setupAutoRefresh();
 });
 
@@ -794,272 +841,304 @@ function setDefaultDates() {
 }
 
 function initializeAdvancedCharts() {
+    console.log('Initializing charts...');
+    
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded!');
+        return;
+    }
+
     // Sales Trend Chart with dual axis
-    const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
-    salesTrendChart = new Chart(salesCtx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Satış Miktarı',
-                data: [],
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.4,
-                fill: true,
-                pointRadius: 6,
-                pointHoverRadius: 8
-            }, {
-                label: 'Gelir (₺)',
-                data: [],
-                borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                tension: 0.4,
-                fill: true,
-                yAxisID: 'y1',
-                pointRadius: 6,
-                pointHoverRadius: 8
-            }, {
-                label: 'Ortalama Sipariş Değeri (₺)',
-                data: [],
-                borderColor: '#ffc107',
-                backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                tension: 0.4,
-                fill: false,
-                yAxisID: 'y1',
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            ...advancedChartConfig,
-            scales: {
-                ...advancedChartConfig.scales,
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return new Intl.NumberFormat('tr-TR', {
-                                style: 'currency',
-                                currency: 'TRY',
-                                minimumFractionDigits: 0
-                            }).format(value);
+    const salesCtx = document.getElementById('salesTrendChart');
+    if (salesCtx) {
+        salesTrendChart = new Chart(salesCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Satış Miktarı',
+                    data: [],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }, {
+                    label: 'Gelir (₺)',
+                    data: [],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y1',
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }, {
+                    label: 'Ortalama Sipariş Değeri (₺)',
+                    data: [],
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.4,
+                    fill: false,
+                    yAxisID: 'y1',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                ...advancedChartConfig,
+                scales: {
+                    ...advancedChartConfig.scales,
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return new Intl.NumberFormat('tr-TR', {
+                                    style: 'currency',
+                                    currency: 'TRY',
+                                    minimumFractionDigits: 0
+                                }).format(value);
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log('Sales trend chart created');
+    }
 
     // Enhanced Category Chart
-    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-    categoryChart = new Chart(categoryCtx, {
-        type: 'doughnut',
-        data: {
-            labels: [],
-            datasets: [{
-                data: [],
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-                ],
-                borderWidth: 3,
-                borderColor: '#fff',
-                hoverBorderWidth: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 15,
-                        usePointStyle: true
+    const categoryCtx = document.getElementById('categoryChart');
+    if (categoryCtx) {
+        categoryChart = new Chart(categoryCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    hoverBorderWidth: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${new Intl.NumberFormat('tr-TR').format(value)} (${percentage}%)`;
+                            }
+                        }
                     }
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${new Intl.NumberFormat('tr-TR').format(value)} (${percentage}%)`;
+                cutout: '60%'
+            }
+        });
+        console.log('Category chart created');
+    }
+
+    // Regional Performance Chart
+    const regionalCtx = document.getElementById('regionalChart');
+    if (regionalCtx) {
+        regionalChart = new Chart(regionalCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Satış Miktarı',
+                    data: [],
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Gelir (₺)',
+                    data: [],
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                ...advancedChartConfig,
+                scales: {
+                    ...advancedChartConfig.scales,
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
                         }
                     }
                 }
-            },
-            cutout: '60%'
-        }
-    });
-
-    // Regional Performance Chart
-    const regionalCtx = document.getElementById('regionalChart').getContext('2d');
-    regionalChart = new Chart(regionalCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Satış Miktarı',
-                data: [],
-                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2
-            }, {
-                label: 'Gelir (₺)',
-                data: [],
-                backgroundColor: 'rgba(255, 99, 132, 0.8)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 2,
-                yAxisID: 'y1'
-            }]
-        },
-        options: {
-            ...advancedChartConfig,
-            scales: {
-                ...advancedChartConfig.scales,
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: {
-                        drawOnChartArea: false,
-                    }
-                }
             }
-        }
-    });
+        });
+        console.log('Regional chart created');
+    }
 
     // Top Products Chart
-    const topProductsCtx = document.getElementById('topProductsChart').getContext('2d');
-    topProductsChart = new Chart(topProductsCtx, {
-        type: 'horizontalBar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Satış Miktarı',
-                data: [],
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-                    '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#36A2EB'
-                ],
-                borderColor: '#fff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            ...advancedChartConfig,
-            indexAxis: 'y',
-            plugins: {
-                ...advancedChartConfig.plugins,
-                legend: {
-                    display: false
+    const topProductsCtx = document.getElementById('topProductsChart');
+    if (topProductsCtx) {
+        topProductsChart = new Chart(topProductsCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Satış Miktarı',
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#36A2EB'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...advancedChartConfig,
+                indexAxis: 'y',
+                plugins: {
+                    ...advancedChartConfig.plugins,
+                    legend: {
+                        display: false
+                    }
                 }
             }
-        }
-    });
+        });
+        console.log('Top products chart created');
+    }
 
     // Financial Performance Chart
-    const financialCtx = document.getElementById('financialChart').getContext('2d');
-    financialChart = new Chart(financialCtx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Aylık Gelir (₺)',
-                data: [],
-                borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                tension: 0.4,
-                fill: true
-            }, {
-                label: 'Aylık Maliyet (₺)',
-                data: [],
-                borderColor: '#dc3545',
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                tension: 0.4,
-                fill: true
-            }, {
-                label: 'Net Kar (₺)',
-                data: [],
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: advancedChartConfig
-    });
+    const financialCtx = document.getElementById('financialChart');
+    if (financialCtx) {
+        financialChart = new Chart(financialCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Aylık Gelir (₺)',
+                    data: [],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Aylık Maliyet (₺)',
+                    data: [],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Net Kar (₺)',
+                    data: [],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: advancedChartConfig
+        });
+        console.log('Financial chart created');
+    }
 
     // Supply Chain Metrics Chart
-    const supplyCtx = document.getElementById('supplyChainChart').getContext('2d');
-    supplyChainChart = new Chart(supplyCtx, {
-        type: 'radar',
-        data: {
-            labels: ['Teslimat Hızı', 'Stok Yönetimi', 'Tedarikçi Güvenilirliği', 'Maliyet Etkinliği', 'Kalite', 'Müşteri Memnuniyeti'],
-            datasets: [{
-                label: 'Mevcut Performans',
-                data: [85, 70, 90, 75, 95, 80],
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2
-            }, {
-                label: 'Hedef',
-                data: [90, 85, 95, 85, 98, 90],
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        stepSize: 20
+    const supplyCtx = document.getElementById('supplyChainChart');
+    if (supplyCtx) {
+        supplyChainChart = new Chart(supplyCtx.getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['Teslimat Hızı', 'Stok Yönetimi', 'Tedarikçi Güvenilirliği', 'Maliyet Etkinliği', 'Kalite', 'Müşteri Memnuniyeti'],
+                datasets: [{
+                    label: 'Mevcut Performans',
+                    data: [85, 70, 90, 75, 95, 80],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Hedef',
+                    data: [90, 85, 95, 85, 98, 90],
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log('Supply chain chart created');
+    }
 
     // Comparative Chart
-    const comparativeCtx = document.getElementById('comparativeChart').getContext('2d');
-    comparativeChart = new Chart(comparativeCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: []
-        },
-        options: {
-            ...advancedChartConfig,
-            plugins: {
-                ...advancedChartConfig.plugins,
-                title: {
-                    display: true,
-                    text: 'Yıllık Performans Karşılaştırması',
-                    font: {
-                        size: 16,
-                        weight: 'bold'
+    const comparativeCtx = document.getElementById('comparativeChart');
+    if (comparativeCtx) {
+        comparativeChart = new Chart(comparativeCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                ...advancedChartConfig,
+                plugins: {
+                    ...advancedChartConfig.plugins,
+                    title: {
+                        display: true,
+                        text: 'Yıllık Performans Karşılaştırması',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log('Comparative chart created');
+    }
+    
+    console.log('All charts initialized');
 }
 
 // loadDashboardData fonksiyonunu güncelle
 function loadDashboardData() {
+    console.log('Loading dashboard data...');
     showLoadingWithProgress();
     
     const filters = {
@@ -1091,7 +1170,6 @@ function loadDashboardData() {
     })
     .then(response => {
         console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1099,14 +1177,15 @@ function loadDashboardData() {
         return response.text(); // First get as text to debug
     })
     .then(text => {
-        console.log('Raw response:', text);
+        console.log('Raw response (first 500 chars):', text.substring(0, 500));
         try {
             const data = JSON.parse(text);
             console.log('Parsed data:', data);
             return data;
         } catch (e) {
             console.error('JSON parse error:', e);
-            throw new Error('Invalid JSON response: ' + text);
+            console.error('Full response:', text);
+            throw new Error('Invalid JSON response');
         }
     })
     .then(data => {
@@ -1137,13 +1216,17 @@ function loadDashboardData() {
         showErrorMessage('Veri yüklenirken bir hata oluştu: ' + error.message);
     });
 }
+
 function showLoadingWithProgress() {
     $('#loadingModal').modal('show');
     updateLoadingProgress(0);
 }
 
 function updateLoadingProgress(percentage) {
-    document.getElementById('loadingProgress').style.width = percentage + '%';
+    const progressBar = document.getElementById('loadingProgress');
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
 }
 
 function hideLoading() {
@@ -1156,60 +1239,78 @@ function updateAllCharts(data) {
     
     // Update Sales Trend Chart
     if (data.salesTrend && salesTrendChart) {
-        console.log('Updating sales trend chart');
-        salesTrendChart.data.labels = data.salesTrend.labels;
-        salesTrendChart.data.datasets[0].data = data.salesTrend.sales;
-        salesTrendChart.data.datasets[1].data = data.salesTrend.revenue;
-        salesTrendChart.data.datasets[2].data = data.salesTrend.avgOrderValue;
+        console.log('Updating sales trend chart with:', data.salesTrend);
+        salesTrendChart.data.labels = data.salesTrend.labels || [];
+        salesTrendChart.data.datasets[0].data = data.salesTrend.sales || [];
+        salesTrendChart.data.datasets[1].data = data.salesTrend.revenue || [];
+        salesTrendChart.data.datasets[2].data = data.salesTrend.avgOrderValue || [];
         salesTrendChart.update('active');
+        console.log('Sales trend chart updated');
+    } else {
+        console.warn('Sales trend data or chart missing');
     }
 
     // Update Category Chart
     if (data.categoryDistribution && categoryChart) {
-        console.log('Updating category chart');
-        categoryChart.data.labels = data.categoryDistribution.labels;
-        categoryChart.data.datasets[0].data = data.categoryDistribution.data;
+        console.log('Updating category chart with:', data.categoryDistribution);
+        categoryChart.data.labels = data.categoryDistribution.labels || [];
+        categoryChart.data.datasets[0].data = data.categoryDistribution.data || [];
         categoryChart.update('active');
         updateCategoryLegend(data.categoryDistribution);
+        console.log('Category chart updated');
+    } else {
+        console.warn('Category data or chart missing');
     }
 
     // Update Regional Chart
     if (data.regionalPerformance && regionalChart) {
-        console.log('Updating regional chart');
-        regionalChart.data.labels = data.regionalPerformance.labels;
-        regionalChart.data.datasets[0].data = data.regionalPerformance.sales;
-        regionalChart.data.datasets[1].data = data.regionalPerformance.revenue;
+        console.log('Updating regional chart with:', data.regionalPerformance);
+        regionalChart.data.labels = data.regionalPerformance.labels || [];
+        regionalChart.data.datasets[0].data = data.regionalPerformance.sales || [];
+        regionalChart.data.datasets[1].data = data.regionalPerformance.revenue || [];
         regionalChart.update('active');
+        console.log('Regional chart updated');
+    } else {
+        console.warn('Regional data or chart missing');
     }
 
     // Update Top Products Chart
     if (data.topProducts && topProductsChart) {
-        console.log('Updating top products chart');
-        topProductsChart.data.labels = data.topProducts.labels;
-        topProductsChart.data.datasets[0].data = data.topProducts.data;
+        console.log('Updating top products chart with:', data.topProducts);
+        topProductsChart.data.labels = data.topProducts.labels || [];
+        topProductsChart.data.datasets[0].data = data.topProducts.data || [];
         topProductsChart.update('active');
+        console.log('Top products chart updated');
+    } else {
+        console.warn('Top products data or chart missing');
     }
 
     // Update Financial Chart
     if (data.financial && financialChart) {
-        console.log('Updating financial chart');
-        financialChart.data.labels = data.financial.labels;
-        financialChart.data.datasets[0].data = data.financial.revenue;
-        financialChart.data.datasets[1].data = data.financial.costs;
-        financialChart.data.datasets[2].data = data.financial.profit;
+        console.log('Updating financial chart with:', data.financial);
+        financialChart.data.labels = data.financial.labels || [];
+        financialChart.data.datasets[0].data = data.financial.revenue || [];
+        financialChart.data.datasets[1].data = data.financial.costs || [];
+        financialChart.data.datasets[2].data = data.financial.profit || [];
         financialChart.update('active');
+        console.log('Financial chart updated');
+    } else {
+        console.warn('Financial data or chart missing');
     }
 
     // Update Comparative Chart
     if (data.comparative && comparativeChart) {
-        console.log('Updating comparative chart');
-        comparativeChart.data.labels = data.comparative.labels;
-        comparativeChart.data.datasets = data.comparative.datasets;
+        console.log('Updating comparative chart with:', data.comparative);
+        comparativeChart.data.labels = data.comparative.labels || [];
+        comparativeChart.data.datasets = data.comparative.datasets || [];
         comparativeChart.update('active');
+        console.log('Comparative chart updated');
+    } else {
+        console.warn('Comparative data or chart missing');
     }
     
     // Update additional summary metrics
-    if (data.salesTrend && data.salesTrend.revenue.length > 0) {
+    if (data.salesTrend && data.salesTrend.revenue && data.salesTrend.revenue.length > 0) {
         const currentMonthRevenue = data.salesTrend.revenue[data.salesTrend.revenue.length - 1];
         const prevMonthRevenue = data.salesTrend.revenue[data.salesTrend.revenue.length - 2] || currentMonthRevenue;
         const revenueGrowth = prevMonthRevenue > 0 ? ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100) : 0;
@@ -1224,6 +1325,8 @@ function updateAllCharts(data) {
             revenueGrowthEl.textContent = (revenueGrowth > 0 ? '+' : '') + revenueGrowth.toFixed(1) + '%';
         }
     }
+    
+    console.log('All charts update completed');
 }
 
 // updateKPIs fonksiyonunu güncelle
@@ -1279,10 +1382,10 @@ function updateKPIs(kpis) {
     updateProgressBar('revenueProgress', kpis.revenueProgress || 0);
     updateProgressBar('avgProgress', kpis.avgProgress || 0);
     updateProgressBar('categoryProgress', kpis.categoryProgress || 0);
-    updateProgressBar('customerProgress', (kpis.activeCustomers / 2000) * 100 || 0);
+    updateProgressBar('customerProgress', (kpis.activeCustomers / 50) * 100 || 0);
     updateProgressBar('productProgress', (kpis.totalProducts / 200) * 100 || 0);
-    updateProgressBar('supplierProgress', (kpis.suppliers / 20) * 100 || 0);
-    updateProgressBar('pendingProgress', (kpis.pendingOrders / 100) * 100 || 0);
+    updateProgressBar('supplierProgress', (kpis.suppliers / 50) * 100 || 0);
+    updateProgressBar('pendingProgress', (kpis.pendingOrders / 20) * 100 || 0);
     updateProgressBar('deliveryProgress', kpis.deliveryRate || 0);
     updateProgressBar('growthProgress', Math.abs(kpis.growthRate || 0));
     
@@ -1329,7 +1432,6 @@ function animateCounter(elementId, targetValue, isCurrency = false) {
     requestAnimationFrame(updateCounter);
 }
 
-
 function easeOutQuart(t) {
     return 1 - (--t) * t * t * t;
 }
@@ -1362,7 +1464,7 @@ function updateCategoryLegend(categoryData) {
         const color = categoryChart.data.datasets[0].backgroundColor[index];
         const value = categoryData.data[index];
         const total = categoryData.data.reduce((a, b) => a + b, 0);
-        const percentage = ((value / total) * 100).toFixed(1);
+        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
         
         legendHTML += `
             <div class="legend-item">
@@ -1419,19 +1521,27 @@ function updatePerformanceTable(performanceData) {
     if (!tableBody || !performanceData) return;
     
     let tableHTML = '';
-    performanceData.forEach(item => {
+    // Sadece ilk 4 metriği göster ve kompakt format kullan
+    const limitedData = performanceData.slice(0, 4);
+    
+    limitedData.forEach(item => {
         const trendClass = item.trend > 0 ? 'trend-up' : item.trend < 0 ? 'trend-down' : 'trend-neutral';
         const trendIcon = item.trend > 0 ? 'fa-arrow-up' : item.trend < 0 ? 'fa-arrow-down' : 'fa-minus';
         
+        // Metrik adını kısalt
+        let shortMetric = item.metric;
+        if (shortMetric.includes('Toplam Gelir')) shortMetric = 'Gelir';
+        if (shortMetric.includes('Satış Miktarı')) shortMetric = 'Satış';
+        if (shortMetric.includes('Müşteri Sayısı')) shortMetric = 'Müşteri';
+        if (shortMetric.includes('Ortalama Sipariş')) shortMetric = 'Ort. Sipariş';
+        
         tableHTML += `
-            <tr>
-                <td><strong>${item.metric}</strong></td>
-                <td>${item.year2022}</td>
-                <td>${item.year2023}</td>
+            <tr style="font-size: 0.8rem;">
+                <td><strong>${shortMetric}</strong></td>
                 <td>${item.year2024}</td>
                 <td>${item.year2025}</td>
-                <td class="${trendClass}">${item.yoyChange}</td>
-                <td class="${trendClass}">
+                <td class="${trendClass}" style="font-weight: bold;">${item.yoyChange}</td>
+                <td class="${trendClass}" style="text-align: center;">
                     <i class="fas ${trendIcon}"></i>
                 </td>
             </tr>
@@ -1462,9 +1572,6 @@ function resetFilters() {
     document.getElementById('filterYear').value = 'all';
     document.getElementById('filterQuarter').value = 'all';
     document.getElementById('filterStatus').value = 'all';
-    document.getElementById('startDate').value = 'all';
-
-
     setDefaultDates();
     loadDashboardData();
 }
@@ -1534,27 +1641,6 @@ function showErrorMessage(message) {
         alert(message);
     }
 }
-
-// Test the connection when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing dashboard...');
-    
-    // First test the API endpoint
-    fetch('dashboard_data.php?test=1')
-        .then(response => response.text())
-        .then(text => {
-            console.log('API test response:', text);
-        })
-        .catch(error => {
-            console.error('API test failed:', error);
-        });
-    
-    // Initialize
-    initializeAdvancedCharts();
-    setDefaultDates();
-    loadDashboardData();
-    setupAutoRefresh();
-});
 
 function setupAutoRefresh() {
     // Auto-refresh every 5 minutes for real-time data
