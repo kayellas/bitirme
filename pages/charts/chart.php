@@ -534,14 +534,14 @@
             </div>
         </div>
 
-        <!-- Year-over-Year Comparison -->
-        <div class="row mb-4">
+        <!-- Year-over-Year Hotel Performance Comparison -->
+<!--         <div class="row mb-4">
             <div class="col-12">
                 <div class="card card-danger card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-chart-bar mr-2"></i>
-                            Yıllık Karşılaştırmalı Performans Analizi (YoY)
+                            <i class="fas fa-chart-line mr-2"></i>
+                            Otel Performans Analizi - Kapasite Bazlı Karşılaştırma (YoY)
                         </h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -553,11 +553,17 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <canvas id="comparativeChart" style="height: 400px;"></canvas>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Performans Skoru:</strong> Kapasite kullanımı (%40) + Gelir performansı (%40) + Müşteri çeşitliliği (%20) formülü ile hesaplanmaktadır.
+                        </div>
+                        <div class="chart-container" style="position: relative; height: 300px; max-height: 300px;">
+                            <canvas id="comparativeChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Executive Summary Table -->
         <div class="row">
@@ -647,6 +653,13 @@
 .chart-container {
     position: relative;
     margin: auto;
+    width: 100%;
+    overflow: hidden;
+}
+
+.chart-container canvas {
+    max-width: 100%;
+    height: auto !important;
 }
 
 .category-legend {
@@ -730,6 +743,30 @@
 
 .trend-neutral {
     color: #6c757d;
+}
+
+/* Responsive Chart Adjustments */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 250px !important;
+        max-height: 250px !important;
+    }
+    
+    .card-body {
+        padding: 1rem 0.5rem;
+    }
+    
+    .alert-info {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-container {
+        height: 200px !important;
+        max-height: 200px !important;
+    }
 }
 </style>
 
@@ -1074,7 +1111,7 @@ function initializeAdvancedCharts() {
         supplyChainChart = new Chart(supplyCtx.getContext('2d'), {
             type: 'radar',
             data: {
-                labels: ['Teslimat Hızı', 'Stok Yönetimi', 'Tedarikçi Güvenilirliği', 'Maliyet Etkinliği', 'Kalite', 'Müşteri Memnuniyeti'],
+                labels: ['Teslimat Hızı', 'Stok Yönetimi', 'Tedarikçi Güvenilirliği', ' Müşteri Memnuniyeti', 'Kalite', 'Maliyet '],
                 datasets: [{
                     label: 'Mevcut Performans',
                     data: [85, 70, 90, 75, 95, 80],
@@ -1106,27 +1143,118 @@ function initializeAdvancedCharts() {
         console.log('Supply chain chart created');
     }
 
-    // Comparative Chart
+    // Comparative Chart - Hotel Performance
     const comparativeCtx = document.getElementById('comparativeChart');
     if (comparativeCtx) {
         comparativeChart = new Chart(comparativeCtx.getContext('2d'), {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: [],
                 datasets: []
             },
             options: {
-                ...advancedChartConfig,
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    ...advancedChartConfig.plugins,
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            }
+                        }
+                    },
                     title: {
                         display: true,
-                        text: 'Yıllık Performans Karşılaştırması',
+                        text: 'Otel Performans Skoru - Yıllık Karşılaştırma (Kapasite Bazlı)',
                         font: {
-                            size: 16,
+                            size: 14,
                             weight: 'bold'
                         }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + '%';
+                                }
+                                return label;
+                            }
+                        }
                     }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            },
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Performans Skoru (%)',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: true,
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Yıl',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 4,
+                        hoverRadius: 6
+                    },
+                    line: {
+                        borderWidth: 2
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart'
                 }
             }
         });
@@ -1303,7 +1431,9 @@ function updateAllCharts(data) {
         console.log('Updating comparative chart with:', data.comparative);
         comparativeChart.data.labels = data.comparative.labels || [];
         comparativeChart.data.datasets = data.comparative.datasets || [];
-        comparativeChart.update('active');
+        
+        // Optimize update for better performance
+        comparativeChart.update('none'); // No animation for better performance
         console.log('Comparative chart updated');
     } else {
         console.warn('Comparative data or chart missing');

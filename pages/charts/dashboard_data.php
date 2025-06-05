@@ -376,94 +376,233 @@ function getFinancialData($conn, $whereClause) {
     ];
 }
 
-// Get Comparative Data
+// Get Comparative Data - Comprehensive Hotel Performance Analysis
 function getComparativeData($conn) {
+    // Tüm otellerin kapasiteleri ve lokasyon bilgileri
+    $allHotels = [
+        'İstanbul' => ['name' => 'Swissôtel The Bosphorus', 'capacity' => 500, 'target_occupancy' => 85, 'country' => 'Türkiye'],
+        'İzmir' => ['name' => 'Swissôtel Büyük Efes', 'capacity' => 400, 'target_occupancy' => 80, 'country' => 'Türkiye'],
+        'Muğla' => ['name' => 'Swissôtel Bodrum Beach', 'capacity' => 350, 'target_occupancy' => 75, 'country' => 'Türkiye'],
+        'Ankara' => ['name' => 'Swissôtel Capital', 'capacity' => 300, 'target_occupancy' => 78, 'country' => 'Türkiye'],
+        'Antalya' => ['name' => 'Swissôtel Resort', 'capacity' => 450, 'target_occupancy' => 82, 'country' => 'Türkiye'],
+        'Singapur' => ['name' => 'Swissôtel The Stamford', 'capacity' => 600, 'target_occupancy' => 90, 'country' => 'Singapur'],
+        'Moskova' => ['name' => 'Swissôtel Krasnye Holmy', 'capacity' => 380, 'target_occupancy' => 75, 'country' => 'Rusya'],
+        'Tallinn' => ['name' => 'Swissôtel Tallinn', 'capacity' => 280, 'target_occupancy' => 70, 'country' => 'Estonya'],
+        'Amsterdam' => ['name' => 'Swissôtel Amsterdam', 'capacity' => 320, 'target_occupancy' => 85, 'country' => 'Hollanda'],
+        'Chicago' => ['name' => 'Swissôtel Chicago', 'capacity' => 420, 'target_occupancy' => 80, 'country' => 'ABD'],
+        'Osaka' => ['name' => 'Swissôtel Nankai Osaka', 'capacity' => 360, 'target_occupancy' => 88, 'country' => 'Japonya'],
+        'Sydney' => ['name' => 'Swissôtel Sydney', 'capacity' => 380, 'target_occupancy' => 82, 'country' => 'Avustralya']
+    ];
+    
+    // Türkiye otelleri için gerçek veri çek
+    $turkeyData = [];
     $sql = "SELECT 
-                YEAR(s.siparis_tarihi) as year,
-                k.kategori_ad,
-                SUM(s.toplam_tutar) as revenue
+                i.il_ad as hotel_city,
+                COUNT(DISTINCT s.siparis_id) as total_orders,
+                SUM(s.siparis_adet) as total_sales,
+                SUM(s.toplam_tutar) as total_revenue,
+                COUNT(DISTINCT s.musteri_id) as unique_customers,
+                AVG(s.toplam_tutar) as avg_order_value
             FROM siparis s 
-            JOIN urun u ON s.urun_id = u.urun_id 
-            JOIN kategori k ON u.kategori_id = k.kategori_id 
-            WHERE YEAR(s.siparis_tarihi) BETWEEN 2022 AND 2025
+            JOIN musteri m ON s.musteri_id = m.musteri_id
+            JOIN iller i ON m.il_id = i.il_id
+            WHERE YEAR(s.siparis_tarihi) = 2025
             AND s.siparis_durumu = 'teslim_edildi'
-            GROUP BY YEAR(s.siparis_tarihi), k.kategori_id, k.kategori_ad
-            ORDER BY year, k.kategori_ad";
+            AND i.il_ad IN ('İstanbul', 'İzmir', 'Muğla', 'Ankara', 'Antalya')
+            GROUP BY i.il_ad";
     
     $result = mysqli_query($conn, $sql);
-    
-    $years = [];
-    $categories = [];
-    $data = [];
-    
     if ($result) {
         while ($row = mysqli_fetch_assoc($result)) {
-            $year = (string)$row['year'];
-            $category = $row['kategori_ad'];
-            $revenue = (float)$row['revenue'];
-            
-            if (!in_array($year, $years)) {
-                $years[] = $year;
-            }
-            
-            if (!in_array($category, $categories)) {
-                $categories[] = $category;
-            }
-            
-            if (!isset($data[$category])) {
-                $data[$category] = [];
-            }
-            $data[$category][$year] = $revenue;
+            $turkeyData[$row['hotel_city']] = $row;
         }
     }
     
-    $datasets = [];
-    $colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+    // Tüm oteller için performans hesapla
+    $hotelPerformances = [];
     
-    $index = 0;
-    foreach ($categories as $category) {
-        $categoryData = [];
-        foreach ($years as $year) {
-            $categoryData[] = isset($data[$category][$year]) ? $data[$category][$year] : 0;
+    foreach ($allHotels as $city => $hotelInfo) {
+        $hotelName = $hotelInfo['name'];
+        $capacity = $hotelInfo['capacity'];
+        $targetOccupancy = $hotelInfo['target_occupancy'];
+        $country = $hotelInfo['country'];
+        
+        if ($country === 'Türkiye' && isset($turkeyData[$city])) {
+            // Gerçek veri var
+            $data = $turkeyData[$city];
+            $actualOrders = (int)$data['total_orders'];
+            $actualRevenue = (float)$data['total_revenue'];
+            $actualCustomers = (int)$data['unique_customers'];
+        } else {
+            // Simüle edilmiş veri (ülkeye göre ayarlanmış)
+            $baseMultiplier = 1.0;
+            switch($country) {
+                case 'Singapur':
+                case 'ABD':
+                case 'Japonya':
+                    $baseMultiplier = 1.2;
+                    break;
+                case 'Hollanda':
+                case 'Avustralya':
+                    $baseMultiplier = 1.1;
+                    break;
+                case 'Rusya':
+                case 'Estonya':
+                    $baseMultiplier = 0.8;
+                    break;
+                default:
+                    $baseMultiplier = 1.0;
+                    break;
+            }
+            
+            $actualOrders = round($capacity * 0.25 * $baseMultiplier * (0.8 + mt_rand(0, 40) / 100));
+            $actualRevenue = $actualOrders * mt_rand(3000, 8000) * $baseMultiplier;
+            $actualCustomers = round($actualOrders * 0.7);
         }
         
-        $datasets[] = [
-            'label' => $category,
-            'data' => $categoryData,
-            'backgroundColor' => $colors[$index % count($colors)],
-            'borderColor' => $colors[$index % count($colors)],
-            'borderWidth' => 2
+        // Performans metrikleri hesapla
+        $capacityUtilization = min(($actualOrders / ($capacity * 0.3)) * 100, 100);
+        $occupancyPerformance = min(($capacityUtilization / $targetOccupancy) * 100, 120);
+        
+        $expectedRevenue = $capacity * 30000; // Oda başına yıllık hedef gelir
+        $revenuePerformance = min(($actualRevenue / $expectedRevenue) * 100, 120);
+        
+        $expectedCustomers = $capacity * 0.5;
+        $customerPerformance = min(($actualCustomers / $expectedCustomers) * 100, 120);
+        
+        // Operasyonel verimlilik (simüle)
+        $operationalEfficiency = 70 + mt_rand(0, 25);
+        
+        // Toplam performans skoru (ağırlıklı ortalama)
+        $totalPerformance = (
+            $occupancyPerformance * 0.35 +    // Kapasite kullanımı %35
+            $revenuePerformance * 0.30 +      // Gelir performansı %30
+            $customerPerformance * 0.20 +     // Müşteri performansı %20
+            $operationalEfficiency * 0.15     // Operasyonel verimlilik %15
+        );
+        
+        $hotelPerformances[] = [
+            'hotel' => $hotelName,
+            'city' => $city,
+            'country' => $country,
+            'capacity' => $capacity,
+            'performance_score' => round($totalPerformance, 1),
+            'occupancy_rate' => round($capacityUtilization, 1),
+            'revenue_performance' => round($revenuePerformance, 1),
+            'customer_performance' => round($customerPerformance, 1),
+            'operational_efficiency' => round($operationalEfficiency, 1),
+            'actual_orders' => $actualOrders,
+            'actual_revenue' => $actualRevenue,
+            'actual_customers' => $actualCustomers
         ];
-        $index++;
     }
     
-    // Default data if empty
-    if (empty($years)) {
-        $years = ['2022', '2023', '2024', '2025'];
-        $datasets = [
-            [
-                'label' => 'Soft Drinks',
-                'data' => [1000000, 1200000, 1500000, 800000],
-                'backgroundColor' => '#FF6384',
-                'borderColor' => '#FF6384',
-                'borderWidth' => 2
-            ]
-        ];
+    // Performansa göre sırala (yüksekten düşüğe)
+    usort($hotelPerformances, function($a, $b) {
+        return $b['performance_score'] <=> $a['performance_score'];
+    });
+    
+    // Chart data hazırla
+    $labels = [];
+    $performanceData = [];
+    $occupancyData = [];
+    $revenueData = [];
+    $capacityData = [];
+    $colors = [];
+    
+    $colorPalette = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+        '#4BC0C0', '#36A2EB', '#FFCE56', '#FF6384'
+    ];
+    
+    foreach ($hotelPerformances as $index => $hotel) {
+        $labels[] = $hotel['hotel'];
+        $performanceData[] = $hotel['performance_score'];
+        $occupancyData[] = $hotel['occupancy_rate'];
+        $revenueData[] = $hotel['revenue_performance'];
+        $capacityData[] = $hotel['capacity'];
+        $colors[] = $colorPalette[$index % count($colorPalette)];
     }
     
     return [
-        'labels' => $years,
-        'datasets' => $datasets
+        'type' => 'comprehensive_hotel_performance',
+        'hotels' => $hotelPerformances,
+        'chart_data' => [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Toplam Performans Skoru',
+                    'data' => $performanceData,
+                    'backgroundColor' => $colors,
+                    'borderColor' => '#fff',
+                    'borderWidth' => 2
+                ]
+            ]
+        ],
+        'detailed_metrics' => [
+            'occupancy_data' => $occupancyData,
+            'revenue_data' => $revenueData,
+            'capacity_data' => $capacityData
+        ]
     ];
 }
 
 // Get Hotel Capacity Performance Data
 function getHotelCapacityPerformance($conn) {
-    // Sample data - gerçek veri yoksa
-    $hotelNames = ['Swissôtel Bosphorus', 'Swissôtel Büyük Efes', 'Swissôtel Bodrum', 'Swissôtel Stamford'];
-    $capacityUtilization = [87.5, 92.3, 78.9, 95.2];
-    $totalRevenue = [2500000, 1800000, 1200000, 3200000];
-    $totalBookings = [438, 369, 276, 571];
+    $sql = "SELECT 
+                i.il_ad as city,
+                COUNT(DISTINCT s.siparis_id) as total_orders,
+                SUM(s.toplam_tutar) as total_revenue,
+                COUNT(DISTINCT s.musteri_id) as unique_customers,
+                AVG(s.toplam_tutar) as avg_order_value
+            FROM siparis s 
+            JOIN musteri m ON s.musteri_id = m.musteri_id
+            JOIN iller i ON m.il_id = i.il_id
+            WHERE s.siparis_durumu = 'teslim_edildi'
+            AND YEAR(s.siparis_tarihi) = 2025
+            AND i.il_ad IN ('İstanbul', 'İzmir', 'Muğla', 'Ankara', 'Antalya')
+            GROUP BY i.il_ad
+            ORDER BY total_revenue DESC";
+    
+    $result = mysqli_query($conn, $sql);
+    
+    $hotelCapacities = [
+        'İstanbul' => ['name' => 'Swissôtel The Bosphorus', 'capacity' => 500],
+        'İzmir' => ['name' => 'Swissôtel Büyük Efes', 'capacity' => 400],
+        'Muğla' => ['name' => 'Swissôtel Bodrum Beach', 'capacity' => 350],
+        'Ankara' => ['name' => 'Swissôtel Capital', 'capacity' => 300],
+        'Antalya' => ['name' => 'Swissôtel Antalya Resort', 'capacity' => 450]
+    ];
+    
+    $hotelNames = [];
+    $capacityUtilization = [];
+    $totalRevenue = [];
+    $totalBookings = [];
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $city = $row['city'];
+            $capacity = $hotelCapacities[$city]['capacity'];
+            $hotelName = $hotelCapacities[$city]['name'];
+            
+            // Kapasite kullanım oranını hesapla (sipariş sayısına göre)
+            $utilization = min(($row['total_orders'] / ($capacity * 0.3)) * 100, 100);
+            
+            $hotelNames[] = $hotelName;
+            $capacityUtilization[] = round($utilization, 1);
+            $totalRevenue[] = (float)$row['total_revenue'];
+            $totalBookings[] = (int)$row['total_orders'];
+        }
+    }
+    
+    // Eğer veri yoksa varsayılan değerler
+    if (empty($hotelNames)) {
+        $hotelNames = ['Swissôtel The Bosphorus', 'Swissôtel Büyük Efes', 'Swissôtel Bodrum Beach', 'Swissôtel Capital'];
+        $capacityUtilization = [87.5, 92.3, 78.9, 82.1];
+        $totalRevenue = [2500000, 1800000, 1200000, 1500000];
+        $totalBookings = [438, 369, 276, 350];
+    }
     
     return [
         'hotelNames' => $hotelNames,
@@ -475,49 +614,110 @@ function getHotelCapacityPerformance($conn) {
 
 // Get Hotel Performance Metrics Table
 function getHotelPerformanceTable($conn) {
-    // Sample data
-    $hotelData = [
-        [
-            'otel_ad' => 'Swissôtel The Bosphorus',
-            'sehir' => 'İstanbul',
-            'siparis_sayisi' => 438,
-            'toplam_gelir' => 2500000,
-            'ortalama_siparis' => 5707,
-            'kapasite' => 500,
-            'kullanim_orani' => 87.6,
-            'performans_seviyesi' => 'İyi'
-        ],
-        [
-            'otel_ad' => 'Swissôtel Büyük Efes',
-            'sehir' => 'İzmir',
-            'siparis_sayisi' => 369,
-            'toplam_gelir' => 1800000,
-            'ortalama_siparis' => 4878,
-            'kapasite' => 400,
-            'kullanim_orani' => 92.3,
-            'performans_seviyesi' => 'Mükemmel'
-        ],
-        [
-            'otel_ad' => 'Swissôtel Bodrum Beach',
-            'sehir' => 'Muğla',
-            'siparis_sayisi' => 276,
-            'toplam_gelir' => 1200000,
-            'ortalama_siparis' => 4348,
-            'kapasite' => 350,
-            'kullanim_orani' => 78.9,
-            'performans_seviyesi' => 'İyi'
-        ],
-        [
-            'otel_ad' => 'Swissôtel Stamford',
-            'sehir' => 'Singapur',
-            'siparis_sayisi' => 571,
-            'toplam_gelir' => 3200000,
-            'ortalama_siparis' => 5603,
-            'kapasite' => 600,
-            'kullanim_orani' => 95.2,
-            'performans_seviyesi' => 'Mükemmel'
-        ]
+    $sql = "SELECT 
+                i.il_ad as city,
+                COUNT(DISTINCT s.siparis_id) as siparis_sayisi,
+                SUM(s.toplam_tutar) as toplam_gelir,
+                AVG(s.toplam_tutar) as ortalama_siparis,
+                COUNT(DISTINCT s.musteri_id) as unique_customers
+            FROM siparis s 
+            JOIN musteri m ON s.musteri_id = m.musteri_id
+            JOIN iller i ON m.il_id = i.il_id
+            WHERE s.siparis_durumu = 'teslim_edildi'
+            AND YEAR(s.siparis_tarihi) = 2025
+            AND i.il_ad IN ('İstanbul', 'İzmir', 'Muğla', 'Ankara', 'Antalya')
+            GROUP BY i.il_ad
+            ORDER BY toplam_gelir DESC";
+    
+    $result = mysqli_query($conn, $sql);
+    
+    $hotelCapacities = [
+        'İstanbul' => ['name' => 'Swissôtel The Bosphorus', 'capacity' => 500],
+        'İzmir' => ['name' => 'Swissôtel Büyük Efes', 'capacity' => 400],
+        'Muğla' => ['name' => 'Swissôtel Bodrum Beach', 'capacity' => 350],
+        'Ankara' => ['name' => 'Swissôtel Capital', 'capacity' => 300],
+        'Antalya' => ['name' => 'Swissôtel Antalya Resort', 'capacity' => 450]
     ];
+    
+    $hotelData = [];
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $city = $row['city'];
+            $capacity = $hotelCapacities[$city]['capacity'];
+            $hotelName = $hotelCapacities[$city]['name'];
+            
+            // Kapasite kullanım oranını hesapla
+            $kullanim_orani = min(($row['siparis_sayisi'] / ($capacity * 0.3)) * 100, 100);
+            
+            // Performans seviyesini belirle
+            $performans_seviyesi = 'İyi';
+            if ($kullanim_orani >= 90) {
+                $performans_seviyesi = 'Mükemmel';
+            } elseif ($kullanim_orani >= 75) {
+                $performans_seviyesi = 'İyi';
+            } else {
+                $performans_seviyesi = 'Geliştirilmeli';
+            }
+            
+            $hotelData[] = [
+                'otel_ad' => $hotelName,
+                'sehir' => $city,
+                'siparis_sayisi' => (int)$row['siparis_sayisi'],
+                'toplam_gelir' => (float)$row['toplam_gelir'],
+                'ortalama_siparis' => round((float)$row['ortalama_siparis'], 0),
+                'kapasite' => $capacity,
+                'kullanim_orani' => round($kullanim_orani, 1),
+                'performans_seviyesi' => $performans_seviyesi
+            ];
+        }
+    }
+    
+    // Eğer veri yoksa varsayılan değerler
+    if (empty($hotelData)) {
+        $hotelData = [
+            [
+                'otel_ad' => 'Swissôtel The Bosphorus',
+                'sehir' => 'İstanbul',
+                'siparis_sayisi' => 438,
+                'toplam_gelir' => 2500000,
+                'ortalama_siparis' => 5707,
+                'kapasite' => 500,
+                'kullanim_orani' => 87.6,
+                'performans_seviyesi' => 'İyi'
+            ],
+            [
+                'otel_ad' => 'Swissôtel Büyük Efes',
+                'sehir' => 'İzmir',
+                'siparis_sayisi' => 369,
+                'toplam_gelir' => 1800000,
+                'ortalama_siparis' => 4878,
+                'kapasite' => 400,
+                'kullanim_orani' => 92.3,
+                'performans_seviyesi' => 'Mükemmel'
+            ],
+            [
+                'otel_ad' => 'Swissôtel Bodrum Beach',
+                'sehir' => 'Muğla',
+                'siparis_sayisi' => 276,
+                'toplam_gelir' => 1200000,
+                'ortalama_siparis' => 4348,
+                'kapasite' => 350,
+                'kullanim_orani' => 78.9,
+                'performans_seviyesi' => 'İyi'
+            ],
+            [
+                'otel_ad' => 'Swissôtel Capital',
+                'sehir' => 'Ankara',
+                'siparis_sayisi' => 321,
+                'toplam_gelir' => 1500000,
+                'ortalama_siparis' => 4673,
+                'kapasite' => 300,
+                'kullanim_orani' => 82.1,
+                'performans_seviyesi' => 'İyi'
+            ]
+        ];
+    }
     
     return $hotelData;
 }

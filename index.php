@@ -29,20 +29,21 @@
                     ORDER BY toplam_satis DESC";
     $kategori_result = $connection->query($kategori_satis);
 
-    // En çok satan ürünler (CEO için top performers)
+    // En çok satan ürünler (CEO için top performers) - FİX EDİLDİ
     $top_urunler = "SELECT 
                         u.urun_ad,
                         k.kategori_ad,
                         SUM(CAST(u.urun_fiyat AS DECIMAL(15,2)) * s.siparis_adet) as toplam_satis,
-                        SUM(s.siparis_adet) as toplam_adet
+                        SUM(s.siparis_adet) as toplam_adet,
+                        COUNT(s.siparis_id) as siparis_sayisi
                     FROM urun u 
                     JOIN kategori k ON u.kategori_id = k.kategori_id 
-                    LEFT JOIN siparis s ON u.urun_id = s.urun_id
+                    JOIN siparis s ON u.urun_id = s.urun_id
                     WHERE s.siparis_durumu = 'teslim_edildi'
                     GROUP BY u.urun_id, u.urun_ad, k.kategori_ad
                     HAVING toplam_satis > 0
                     ORDER BY toplam_satis DESC
-                    LIMIT 15";
+                    LIMIT 10";
     $top_urunler_result = $connection->query($top_urunler);
 
     // Yıllık ve aylık satış trendi için veri
@@ -59,19 +60,21 @@
                             ORDER BY yil, ay";
     $yillik_aylik_result = $connection->query($yillik_aylik_satis);
 
-    // Firma bazlı performans (CEO için key partners)
+    // Tedarikçi bazlı performans (FİX EDİLDİ - location tablosu yerine tedarik tablosu kullanıldı)
     $firma_performans = "SELECT 
-                            l.firma_ad,
+                            t.tedarik_ad as firma_ad,
                             COUNT(s.siparis_id) as siparis_sayisi,
                             SUM(CAST(u.urun_fiyat AS DECIMAL(15,2)) * s.siparis_adet) as toplam_gelir,
-                            l.arac_sayisi,
-                            k.kategori_ad
-                         FROM location l
-                         LEFT JOIN urun u ON l.firma_id = u.firma_id
-                         LEFT JOIN siparis s ON u.urun_id = s.urun_id
-                         LEFT JOIN kategori k ON u.kategori_id = k.kategori_id
+                            t.il_ad,
+                            k.kategori_ad,
+                            COUNT(DISTINCT u.urun_id) as urun_cesidi
+                         FROM tedarik t
+                         JOIN siparis s ON t.tedarik_id = s.tedarik_id
+                         JOIN urun u ON s.urun_id = u.urun_id
+                         JOIN kategori k ON u.kategori_id = k.kategori_id
                          WHERE s.siparis_durumu = 'teslim_edildi'
-                         GROUP BY l.firma_id, l.firma_ad, l.arac_sayisi, k.kategori_ad
+                         GROUP BY t.tedarik_id, t.tedarik_ad, t.il_ad, k.kategori_ad
+                         HAVING toplam_gelir > 0
                          ORDER BY toplam_gelir DESC
                          LIMIT 12";
     $firma_result = $connection->query($firma_performans);
@@ -81,15 +84,46 @@
                                 YEAR(s.siparis_tarihi) as yil,
                                 SUM(CAST(u.urun_fiyat AS DECIMAL(15,2)) * s.siparis_adet) as yillik_gelir,
                                 COUNT(s.siparis_id) as yillik_siparis_sayisi,
-                                COUNT(DISTINCT l.firma_id) as aktif_tedarikci
+                                COUNT(DISTINCT s.tedarik_id) as aktif_tedarikci
                              FROM siparis s
                              JOIN urun u ON s.urun_id = u.urun_id
-                             JOIN location l ON u.firma_id = l.firma_id
                              WHERE s.siparis_durumu = 'teslim_edildi'
                              AND YEAR(s.siparis_tarihi) IN (2022, 2023, 2024, 2025)
                              GROUP BY YEAR(s.siparis_tarihi)
                              ORDER BY yil";
     $yillik_result = $connection->query($yillik_karsilastirma);
+
+    // Dashboard KPI'ları için ek sorgular
+    $dashboard_stats = [
+        'total_products' => 0,
+        'inventory_turnover' => 0,
+        'total_suppliers' => 0,
+        'total_revenue' => 0
+    ];
+
+    // Toplam ürün sayısı
+    $sql = "SELECT COUNT(*) as urun FROM urun";
+    $result = $connection->query($sql);
+    $dashboard_stats['total_products'] = ($result->num_rows > 0) ? $result->fetch_assoc()['urun'] : 0;
+
+    // Envanter devir oranı
+    $sql = "SELECT AVG((urun_miktar/max_urun_miktar)*100) as satis_orani FROM urun WHERE max_urun_miktar > 0";
+    $result = $connection->query($sql);
+    $dashboard_stats['inventory_turnover'] = ($result->num_rows > 0) ? round($result->fetch_assoc()['satis_orani'], 1) : 0;
+
+    // Toplam tedarikçi sayısı
+    $sql = "SELECT COUNT(*) as tedarik_id FROM tedarik";
+    $result = $connection->query($sql);
+    $dashboard_stats['total_suppliers'] = ($result->num_rows > 0) ? $result->fetch_assoc()['tedarik_id'] : 0;
+
+    // Bu yılki toplam gelir
+    $sql = "SELECT SUM(CAST(u.urun_fiyat AS DECIMAL(15,2)) * s.siparis_adet) as toplam_gelir 
+            FROM siparis s 
+            JOIN urun u ON s.urun_id = u.urun_id 
+            WHERE YEAR(s.siparis_tarihi) = YEAR(CURDATE()) 
+            AND s.siparis_durumu = 'teslim_edildi'";
+    $result = $connection->query($sql);
+    $dashboard_stats['total_revenue'] = ($result->num_rows > 0) ? $result->fetch_assoc()['toplam_gelir'] : 0;
 ?>
 
 <!DOCTYPE html>
@@ -111,7 +145,7 @@
   <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   
 <style>
-/* Professional Executive Dashboard Styles */
+/* Professional Executive Dashboard Styles - Enhanced */
 :root {
   --executive-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --executive-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -130,7 +164,7 @@ body {
   color: #2c3e50;
 }
 
-/* Enhanced Chart Containers */
+/* Enhanced Chart Containers - EŞİT BOYUTLAR */
 .executive-chart-card {
   background: var(--card-bg);
   border-radius: var(--border-radius);
@@ -142,7 +176,9 @@ body {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.3);
-  height: fit-content;
+  height: 540px; /* SABİT YÜKSEKLİK - daha yüksek */
+  display: flex;
+  flex-direction: column;
 }
 
 .executive-chart-card::before {
@@ -169,6 +205,7 @@ body {
   display: flex;
   align-items: center;
   position: relative;
+  flex-shrink: 0;
 }
 
 .executive-title::after {
@@ -194,26 +231,28 @@ body {
 
 .executive-chart-container {
   position: relative;
-  height: 300px;
+  height: 300px; /* SABİT YÜKSEKLİK */
   margin: 15px 0;
   background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
   border-radius: 12px;
   padding: 15px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.4);
+  flex-grow: 1;
 }
 
 /* Executive Metrics - Kompakt */
 .executive-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-shrink: 0;
 }
 
 .executive-metric {
   background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  padding: 15px;
+  padding: 12px;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.05);
   text-align: center;
@@ -238,7 +277,7 @@ body {
 }
 
 .metric-value {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #2c3e50;
   margin-bottom: 5px;
@@ -249,7 +288,7 @@ body {
 }
 
 .metric-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #6c757d;
   font-weight: 600;
   text-transform: uppercase;
@@ -257,11 +296,11 @@ body {
 }
 
 .metric-change {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  margin-top: 5px;
-  padding: 3px 8px;
-  border-radius: 15px;
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 
 .metric-change.positive {
@@ -278,26 +317,27 @@ body {
 .executive-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 15px;
-  padding: 15px;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
   background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.3);
   backdrop-filter: blur(10px);
+  flex-shrink: 0;
 }
 
 .executive-legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 3px 10px rgba(0,0,0,0.08);
   transition: all 0.3s ease;
   border: 2px solid transparent;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .executive-legend-item:hover {
@@ -307,20 +347,20 @@ body {
 }
 
 .legend-color {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .legend-label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #2c3e50;
 }
 
 .legend-value {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #6c757d;
   font-weight: 500;
   margin-left: auto;
@@ -329,18 +369,22 @@ body {
 /* Executive Insights - Kompakt */
 .executive-insights {
   margin-top: 15px;
-  padding: 20px;
+  padding: 15px;
   background: linear-gradient(145deg, #f8f9fa, #e9ecef);
   border-radius: 12px;
   border-left: 4px solid #667eea;
   box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  min-height: 120px;
+  display: block !important;
+  visibility: visible !important;
 }
 
 .insights-title {
   font-weight: 700;
   color: #2c3e50;
-  margin-bottom: 15px;
-  font-size: 1.1rem;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
 }
@@ -352,16 +396,18 @@ body {
 
 .insights-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .insight-item {
-  padding: 15px;
+  padding: 10px;
   background: white;
   border-radius: 8px;
   border-left: 3px solid #667eea;
   transition: all 0.3s ease;
+  min-height: 60px;
 }
 
 .insight-item:hover {
@@ -372,20 +418,24 @@ body {
 .insight-item h5 {
   color: #2c3e50;
   font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 0.95rem;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 .insight-item p {
   color: #6c757d;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   margin: 0;
+  line-height: 1.3;
 }
 
 /* Responsive Düzenlemeler */
 @media (max-width: 768px) {
   .executive-chart-card {
     padding: 20px;
+    height: auto;
+    min-height: 450px;
   }
   
   .executive-chart-container {
@@ -402,7 +452,7 @@ body {
   }
   
   .metric-value {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
   }
 }
 
@@ -456,6 +506,245 @@ body {
   font-weight: 700;
 }
 
+/* Activities Section - Enhanced */
+.activities-section {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 25px;
+  box-shadow: var(--shadow-primary);
+  margin-top: 30px;
+}
+
+.activities-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+.activities-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+}
+
+.activities-title i {
+  margin-right: 12px;
+  padding: 12px;
+  background: var(--executive-primary);
+  color: white;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.add-activity-btn {
+  background: var(--executive-primary);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-activity-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.activity-form {
+  display: none;
+  background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn-save, .btn-cancel {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-save {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-save:hover {
+  background: #229954;
+  transform: translateY(-2px);
+}
+
+.btn-cancel {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: #7f8c8d;
+  transform: translateY(-2px);
+}
+
+.activity-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  border-left: 4px solid #667eea;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.activity-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.activity-title {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  flex: 1;
+}
+
+.activity-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-edit {
+  background: #f39c12;
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #e67e22;
+  transform: translateY(-1px);
+}
+
+.btn-delete {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+
+.activity-description {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.activity-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #95a5a6;
+}
+
+.activity-type {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.type-siparis {
+  background: rgba(52, 152, 219, 0.1);
+  color: #3498db;
+}
+
+.type-tedarik {
+  background: rgba(46, 204, 113, 0.1);
+  color: #2ecc71;
+}
+
+.type-toplanti {
+  background: rgba(155, 89, 182, 0.1);
+  color: #9b59b6;
+}
+
+.type-diger {
+  background: rgba(149, 165, 166, 0.1);
+  color: #95a5a6;
+}
+
 /* Animation Keyframes */
 @keyframes fadeInUp {
   from {
@@ -482,6 +771,25 @@ body {
 
 .executive-chart-card:nth-child(4) {
   animation-delay: 0.3s;
+}
+
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
 }
 </style>
 </head>
@@ -605,12 +913,7 @@ body {
           <div class="col-lg-3 col-6">
             <div class="small-box bg-info">
               <div class="inner">
-                <?php
-                $sql = "SELECT COUNT(*) as urun FROM urun";
-                $result = $connection->query($sql);
-                $urun = ($result->num_rows > 0) ? $result->fetch_assoc()['urun'] : 0;
-                ?>
-                <h1><?php echo $urun; ?></h1>
+                <h1><?php echo $dashboard_stats['total_products']; ?></h1>
                 <p>Toplam Ürün Portföyü</p>
               </div>
               <div class="icon">
@@ -622,12 +925,7 @@ body {
           <div class="col-lg-3 col-6">
             <div class="small-box bg-success">
               <div class="inner">
-                <?php
-                $sql = "SELECT AVG((urun_miktar/max_urun_miktar)*100) as satis_orani FROM urun WHERE max_urun_miktar > 0";
-                $result = $connection->query($sql);
-                $satis_orani = ($result->num_rows > 0) ? round($result->fetch_assoc()['satis_orani'], 1) : 0;
-                ?>
-                <h3><?php echo $satis_orani; ?><sup style="font-size: 20px">%</sup></h3>
+                <h3><?php echo $dashboard_stats['inventory_turnover']; ?><sup style="font-size: 20px">%</sup></h3>
                 <p>Ortalama Envanter Devir Oranı</p>
               </div>
               <div class="icon">
@@ -639,12 +937,7 @@ body {
           <div class="col-lg-3 col-6">
             <div class="small-box bg-warning">
               <div class="inner">
-                <?php
-                $sql = "SELECT COUNT(*) as firma_id FROM location";
-                $result = $connection->query($sql);
-                $firma_id = ($result->num_rows > 0) ? $result->fetch_assoc()['firma_id'] : 0;
-                ?>
-                <h1><?php echo $firma_id; ?></h1>
+                <h1><?php echo $dashboard_stats['total_suppliers']; ?></h1>
                 <p>Stratejik Tedarik Ortakları</p>
               </div>
               <div class="icon">
@@ -656,16 +949,7 @@ body {
           <div class="col-lg-3 col-6">
             <div class="small-box bg-danger">
               <div class="inner">
-                <?php
-                $sql = "SELECT SUM(CAST(u.urun_fiyat AS DECIMAL(15,2)) * s.siparis_adet) as toplam_gelir 
-                        FROM siparis s 
-                        JOIN urun u ON s.urun_id = u.urun_id 
-                        WHERE YEAR(s.siparis_tarihi) = YEAR(CURDATE()) 
-                        AND s.siparis_durumu = 'teslim_edildi'";
-                $result = $connection->query($sql);
-                $toplam_gelir = ($result->num_rows > 0) ? number_format($result->fetch_assoc()['toplam_gelir'], 0, ',', '.') : 0;
-                ?>
-                <h1>₺<?php echo $toplam_gelir; ?></h1>
+                <h1>₺<?php echo number_format($dashboard_stats['total_revenue'], 0, ',', '.'); ?></h1>
                 <p>Bu Yılki Toplam Ciro</p>
               </div>
               <div class="icon">
@@ -715,12 +999,12 @@ body {
 
           <!-- Yıllık Performans Trendi -->
           <div class="col-lg-6">
-            <div class="executive-chart-card">
+            <div class="executive-chart-card" style="height: 580px;">
               <div class="executive-title">
                 <i class="fas fa-chart-line"></i>
                 Yıllık Büyüme Performansı
               </div>
-              <div class="executive-metrics">
+<!--               <div class="executive-metrics">
                 <div class="executive-metric">
                   <div class="metric-value"><?php
                     $yillik_result->data_seek(0);
@@ -745,11 +1029,11 @@ body {
                   <div class="metric-label">2025 Gelir</div>
                   <div class="metric-change positive">+45.2%</div>
                 </div>
-              </div>
-              <div class="executive-chart-container">
+              </div> -->
+              <div class="executive-chart-container" style="height: 250px;">
                 <canvas id="yillikPerformansChart"></canvas>
               </div>
-              <div class="executive-insights">
+              <div class="executive-insights" style="margin-top: 10px; padding: 15px;">
                 <div class="insights-title">
                   <i class="fas fa-lightbulb"></i>
                   Performans Özeti
@@ -761,7 +1045,7 @@ body {
                   </div>
                   <div class="insight-item">
                     <h5>Hedef Gerçekleşme</h5>
-                    <p>2025 hedefinin %85'i şubat sonunda gerçekleşti</p>
+                    <p>2025 hedefinin %75'i şubat sonunda gerçekleşti</p>
                   </div>
                 </div>
               </div>
@@ -772,12 +1056,12 @@ body {
         <div class="row">
           <!-- Aylık Satış Trendi -->
           <div class="col-lg-8">
-            <div class="executive-chart-card">
+            <div class="executive-chart-card" style="height: 600px;">
               <div class="executive-title">
                 <i class="fas fa-chart-area"></i>
                 Aylık Gelir Trendi & Sezonalite Analizi
               </div>
-              <div class="executive-chart-container" style="height: 320px;">
+              <div class="executive-chart-container" style="height: 400px;">
                 <canvas id="aylikTrendChart"></canvas>
               </div>
               <div class="executive-insights">
@@ -792,7 +1076,7 @@ body {
                   </div>
                   <div class="insight-item">
                     <h5>Büyüme Momentum</h5>
-                    <p>2025 hedeflerinin %120'si gerçekleşti</p>
+                    <p>2025 hedeflerinin %75'si gerçekleşti</p>
                   </div>
                   <div class="insight-item">
                     <h5>Kategori Dinamikleri</h5>
@@ -805,13 +1089,52 @@ body {
 
           <!-- Top Performing Products -->
           <div class="col-lg-4">
-            <div class="executive-chart-card">
+            <div class="executive-chart-card" style="height: 580px;">
               <div class="executive-title">
                 <i class="fas fa-star"></i>
                 En Performanslı Ürünler
               </div>
-              <div class="executive-chart-container">
+              <div class="executive-metrics">
+                <div class="executive-metric">
+                  <div class="metric-value">₺<?php
+                    $top_urunler_result->data_seek(0);
+                    $top_total = 0;
+                    $count = 0;
+                    while($row = $top_urunler_result->fetch_assoc() && $count < 10) {
+                        $top_total += $row['toplam_satis'];
+                        $count++;
+                    }
+                    echo number_format($top_total/1000000, 1);
+                  ?>M</div>
+                  <div class="metric-label">Top 10 Gelir</div>
+                  <div class="metric-change positive">+15.7%</div>
+                </div>
+                <div class="executive-metric">
+                  <div class="metric-value"><?php
+                    echo number_format(($top_total / $total_revenue) * 100, 0);
+                  ?>%</div>
+                  <div class="metric-label">Gelir Payı</div>
+                  <div class="metric-change positive">+3.2%</div>
+                </div>
+              </div>
+              <div class="executive-chart-container" style="height: 280px;">
                 <canvas id="topUrunlerChart"></canvas>
+              </div>
+              <div class="executive-insights" style="margin-top: 10px; padding: 15px;">
+                <div class="insights-title">
+                  <i class="fas fa-trophy"></i>
+                  Ürün Analizi
+                </div>
+                <div class="insights-grid">
+                  <div class="insight-item">
+                    <h5>Premium Segment</h5>
+                    <p>Yüksek marjlı ürünler öne çıkıyor</p>
+                  </div>
+                  <div class="insight-item">
+                    <h5>Kategori Lideri</h5>
+                    <p>Sıcak içecekler en yüksek performans</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -820,12 +1143,37 @@ body {
         <div class="row">
           <!-- Tedarikçi Performansı -->
           <div class="col-lg-12">
-            <div class="executive-chart-card">
+            <div class="executive-chart-card" style="height: 700px;">
               <div class="executive-title">
                 <i class="fas fa-handshake"></i>
-                Stratejik Tedarikçi Performansı
+                Stratejik Tedarikçi Performansı & Coğrafi Dağılım
               </div>
-              <div class="executive-chart-container" style="height: 300px;">
+              <div class="executive-metrics">
+                <div class="executive-metric">
+                  <div class="metric-value"><?php
+                    $firma_result->data_seek(0);
+                    echo $firma_result->num_rows;
+                  ?></div>
+                  <div class="metric-label">Aktif Partner</div>
+                  <div class="metric-change positive">+5</div>
+                </div>
+                <div class="executive-metric">
+                  <div class="metric-value">98.5%</div>
+                  <div class="metric-label">Teslimat Oranı</div>
+                  <div class="metric-change positive">+2.1%</div>
+                </div>
+                <div class="executive-metric">
+                  <div class="metric-value">12%</div>
+                  <div class="metric-label">Maliyet Tasarrufu</div>
+                  <div class="metric-change positive">YoY</div>
+                </div>
+                <div class="executive-metric">
+                  <div class="metric-value">7</div>
+                  <div class="metric-label">Bölge Kapsamı</div>
+                  <div class="metric-change positive">+1</div>
+                </div>
+              </div>
+              <div class="executive-chart-container" style="height: 450px;">
                 <canvas id="tedarikciPerformansChart"></canvas>
               </div>
               <div class="executive-insights">
@@ -856,67 +1204,53 @@ body {
           </div>
         </div>
 
-        <!-- Activity List -->
+        <!-- Enhanced Activity List -->
         <div class="row">
           <div class="col-lg-12">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">
-                  <i class="ion ion-clipboard mr-1"></i>
-                  Son Aktiviteler
-                </h3>
+            <div class="activities-section">
+              <div class="activities-header">
+                <div class="activities-title">
+                  <i class="fas fa-clipboard-list"></i>
+                  İş Takip Sistemi & Son Aktiviteler
+                </div>
+                <button class="add-activity-btn" onclick="showActivityForm()">
+                  <i class="fas fa-plus"></i>
+                  Yeni Aktivite Ekle
+                </button>
               </div>
-              <div class="card-body">
-                <ul class="todo-list" data-widget="todo-list">
-                  <li>
-                    <span class="handle">
-                      <i class="fas fa-ellipsis-v"></i>
-                      <i class="fas fa-ellipsis-v"></i>
-                    </span>
-                    <div class="icheck-primary d-inline ml-2">
-                      <input type="checkbox" value="" name="todo1" id="todoCheck1">
-                      <label for="todoCheck1"></label>
-                    </div>
-                    <span class="text">Tedarikçi'den 'XXX' koli sipariş depoya ulaştı.</span>
-                    <small class="badge badge-danger"><i class="far fa-clock"></i> 2 mins</small>
-                    <div class="tools">
-                      <i class="fas fa-edit"></i>
-                      <i class="fas fa-trash-o"></i>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="handle">
-                      <i class="fas fa-ellipsis-v"></i>
-                      <i class="fas fa-ellipsis-v"></i>
-                    </span>
-                    <div class="icheck-primary d-inline ml-2">
-                      <input type="checkbox" value="" name="todo2" id="todoCheck2" checked>
-                      <label for="todoCheck2"></label>
-                    </div>
-                    <span class="text">Tedarikçi'den 'XXX' koli 'YYY' ürün sipariş edildi.</span>
-                    <small class="badge badge-info"><i class="far fa-clock"></i> 4 hours</small>
-                    <div class="tools">
-                      <i class="fas fa-edit"></i>
-                      <i class="fas fa-trash-o"></i>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="handle">
-                      <i class="fas fa-ellipsis-v"></i>
-                      <i class="fas fa-ellipsis-v"></i>
-                    </span>
-                    <div class="icheck-primary d-inline ml-2">
-                      <input type="checkbox" value="" name="todo3" id="todoCheck3">
-                      <label for="todoCheck3"></label>
-                    </div>
-                    <span class="text">'ZZZ' firması ile 10.01.2023 - 14.00 toplantı var.</span>
-                    <small class="badge badge-warning"><i class="far fa-clock"></i> 1 day</small>
-                    <div class="tools">
-                      <i class="fas fa-edit"></i>
-                      <i class="fas fa-trash-o"></i>
-                    </div>
-                  </li>
-                </ul>
+
+              <!-- Activity Form -->
+              <div class="activity-form" id="activityForm">
+                <div class="form-group">
+                  <label for="activityTitle">Aktivite Başlığı</label>
+                  <input type="text" id="activityTitle" placeholder="Aktivite başlığını girin">
+                </div>
+                <div class="form-group">
+                  <label for="activityDescription">Açıklama</label>
+                  <textarea id="activityDescription" rows="3" placeholder="Detaylı açıklama girin"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="activityType">Aktivite Türü</label>
+                  <select id="activityType">
+                    <option value="siparis">Sipariş</option>
+                    <option value="tedarik">Tedarik</option>
+                    <option value="toplanti">Toplantı</option>
+                    <option value="diger">Diğer</option>
+                  </select>
+                </div>
+                <div class="form-buttons">
+                  <button class="btn-save" onclick="saveActivity()">
+                    <i class="fas fa-save"></i> Kaydet
+                  </button>
+                  <button class="btn-cancel" onclick="hideActivityForm()">
+                    <i class="fas fa-times"></i> İptal
+                  </button>
+                </div>
+              </div>
+
+              <!-- Activity List -->
+              <div class="activity-list" id="activityList">
+                <!-- Activities will be dynamically added here -->
               </div>
             </div>
           </div>
@@ -939,6 +1273,162 @@ body {
 <script src="dist/js/adminlte.js"></script>
 
 <script>
+// Memory-based storage for activities (session-based)
+let activities = [
+  {
+    id: 1,
+    title: "Tedarikçi'den 'Premium Kahve' koli sipariş depoya ulaştı",
+    description: "Starbucks tedarikçisinden 150 koli premium kahve ürünü başarıyla teslim alındı. Kalite kontrol işlemleri tamamlandı.",
+    type: "siparis",
+    timestamp: new Date(Date.now() - 2 * 60 * 1000) // 2 minutes ago
+  },
+  {
+    id: 2,
+    title: "Efes Pilsen ile Q2 kontrat görüşmesi planlandı",
+    description: "Q2 dönem için yeni fiyatlandırma ve teslimat koşulları görüşülecek. Toplantı 15 Haziran'da planlandı.",
+    type: "toplanti",
+    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000) // 4 hours ago
+  },
+  {
+    id: 3,
+    title: "Çaykur tedarikçisi ile kalite kontrol raporu incelemesi",
+    description: "Son teslimat edilen çay ürünlerinin kalite standartları değerlendirildi. Tüm ürünler standartları karşılıyor.",
+    type: "tedarik",
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
+  }
+];
+
+let activityIdCounter = 4;
+let editingActivityId = null;
+
+// Activity Management Functions
+function showActivityForm() {
+  document.getElementById('activityForm').style.display = 'block';
+  editingActivityId = null;
+  clearForm();
+}
+
+function hideActivityForm() {
+  document.getElementById('activityForm').style.display = 'none';
+  editingActivityId = null;
+  clearForm();
+}
+
+function clearForm() {
+  document.getElementById('activityTitle').value = '';
+  document.getElementById('activityDescription').value = '';
+  document.getElementById('activityType').value = 'siparis';
+}
+
+function saveActivity() {
+  const title = document.getElementById('activityTitle').value.trim();
+  const description = document.getElementById('activityDescription').value.trim();
+  const type = document.getElementById('activityType').value;
+
+  if (!title) {
+    alert('Lütfen aktivite başlığını girin.');
+    return;
+  }
+
+  if (editingActivityId) {
+    // Update existing activity
+    const activity = activities.find(a => a.id === editingActivityId);
+    if (activity) {
+      activity.title = title;
+      activity.description = description;
+      activity.type = type;
+    }
+  } else {
+    // Add new activity
+    const newActivity = {
+      id: activityIdCounter++,
+      title: title,
+      description: description,
+      type: type,
+      timestamp: new Date()
+    };
+    activities.unshift(newActivity); // Add to beginning
+  }
+
+  hideActivityForm();
+  renderActivities();
+}
+
+function editActivity(id) {
+  const activity = activities.find(a => a.id === id);
+  if (activity) {
+    document.getElementById('activityTitle').value = activity.title;
+    document.getElementById('activityDescription').value = activity.description;
+    document.getElementById('activityType').value = activity.type;
+    
+    editingActivityId = id;
+    document.getElementById('activityForm').style.display = 'block';
+  }
+}
+
+function deleteActivity(id) {
+  if (confirm('Bu aktiviteyi silmek istediğinizden emin misiniz?')) {
+    activities = activities.filter(a => a.id !== id);
+    renderActivities();
+  }
+}
+
+function formatTimeAgo(timestamp) {
+  const now = new Date();
+  const diffMs = now - timestamp;
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 60) {
+    return diffMins <= 1 ? 'az önce' : `${diffMins} dakika önce`;
+  } else if (diffHours < 24) {
+    return `${diffHours} saat önce`;
+  } else {
+    return `${diffDays} gün önce`;
+  }
+}
+
+function renderActivities() {
+  const container = document.getElementById('activityList');
+  
+  if (activities.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #95a5a6;">
+        <i class="fas fa-clipboard" style="font-size: 3rem; margin-bottom: 15px;"></i>
+        <p style="font-size: 1.1rem;">Henüz aktivite bulunmuyor.</p>
+        <p>Yeni aktivite eklemek için yukarıdaki butonu kullanın.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = activities.map(activity => `
+    <div class="activity-item">
+      <div class="activity-header">
+        <div class="activity-title">${activity.title}</div>
+        <div class="activity-actions">
+          <button class="action-btn btn-edit" onclick="editActivity(${activity.id})">
+            <i class="fas fa-edit"></i> Düzenle
+          </button>
+          <button class="action-btn btn-delete" onclick="deleteActivity(${activity.id})">
+            <i class="fas fa-trash"></i> Sil
+          </button>
+        </div>
+      </div>
+      <div class="activity-description">${activity.description}</div>
+      <div class="activity-meta">
+        <span class="activity-type type-${activity.type}">
+          ${activity.type === 'siparis' ? 'Sipariş' : 
+            activity.type === 'tedarik' ? 'Tedarik' : 
+            activity.type === 'toplanti' ? 'Toplantı' : 'Diğer'}
+        </span>
+        <span>${formatTimeAgo(activity.timestamp)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 $(document).ready(function() {
     // Professional Color Palette
     const professionalColors = {
@@ -947,18 +1437,12 @@ $(document).ready(function() {
         accent: ['#f5576c', '#f093fb', '#ff9a9e']
     };
 
-    // 1. Kategori Bazlı Satış Dağılımı - Professional Donut Chart
+    // 1. Kategori Bazlı Satış Dağılımı - DİNAMİK VERİ
     const kategoriDonutData = {
         labels: [],
         datasets: [{
             data: [],
-            backgroundColor: [
-                '#667eea',
-                '#f093fb', 
-                '#4facfe',
-                '#43e97b',
-                '#764ba2'
-            ],
+            backgroundColor: professionalColors.primary,
             borderColor: '#ffffff',
             borderWidth: 3,
             hoverBorderWidth: 5,
@@ -986,12 +1470,13 @@ $(document).ready(function() {
     kategoriDonutData.labels = [<?php echo implode(',', $kategori_labels); ?>];
     kategoriDonutData.datasets[0].data = [<?php echo implode(',', $kategori_data); ?>];
 
-    // Professional Legend oluştur
+    // Professional Legend oluştur - DİNAMİK
     let kategoriLegendHtml = '';
     const kategoriDetails = <?php echo json_encode($kategori_details); ?>;
+    const kategoriTotal = kategoriDetails.reduce((sum, cat) => sum + cat.satis, 0);
     kategoriDetails.forEach((item, index) => {
-        const color = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#764ba2'][index];
-        const percentage = (item.satis / kategoriDetails.reduce((sum, cat) => sum + cat.satis, 0) * 100).toFixed(1);
+        const color = professionalColors.primary[index % professionalColors.primary.length];
+        const percentage = kategoriTotal > 0 ? (item.satis / kategoriTotal * 100).toFixed(1) : '0.0';
         kategoriLegendHtml += `
             <div class="executive-legend-item">
                 <div class="legend-color" style="background-color: ${color}"></div>
@@ -1009,9 +1494,7 @@ $(document).ready(function() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
                     titleColor: '#ffffff',
@@ -1023,7 +1506,7 @@ $(document).ready(function() {
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed * 100) / total).toFixed(1);
+                            const percentage = total > 0 ? ((context.parsed * 100) / total).toFixed(1) : '0.0';
                             const details = kategoriDetails[context.dataIndex];
                             return [
                                 context.label + ': ₺' + (context.parsed/1000000).toFixed(1) + 'M',
@@ -1043,7 +1526,7 @@ $(document).ready(function() {
         }
     });
 
-    // 2. Yıllık Performans Trendi - Professional Bar Chart
+    // 2. Yıllık Performans Trendi - DİNAMİK VERİ
     const yillikPerformansData = {
         labels: [],
         datasets: [{
@@ -1080,9 +1563,7 @@ $(document).ready(function() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
                     titleColor: '#ffffff',
@@ -1100,7 +1581,7 @@ $(document).ready(function() {
                             
                             if (dataIndex > 0) {
                                 const previousValue = context.dataset.data[dataIndex - 1];
-                                const growth = ((currentValue - previousValue) / previousValue * 100).toFixed(1);
+                                const growth = previousValue > 0 ? ((currentValue - previousValue) / previousValue * 100).toFixed(1) : '0.0';
                                 growthText = 'Büyüme: %' + growth;
                             }
                             
@@ -1122,25 +1603,17 @@ $(document).ready(function() {
                     },
                     ticks: {
                         color: '#6c757d',
-                        font: {
-                            size: 11,
-                            weight: '500'
-                        },
+                        font: { size: 11, weight: '500' },
                         callback: function(value) {
                             return '₺' + (value/1000000).toFixed(1) + 'M';
                         }
                     }
                 },
                 x: {
-                    grid: {
-                        display: false
-                    },
+                    grid: { display: false },
                     ticks: {
                         color: '#6c757d',
-                        font: {
-                            size: 12,
-                            weight: '600'
-                        }
+                        font: { size: 12, weight: '600' }
                     }
                 }
             },
@@ -1151,7 +1624,7 @@ $(document).ready(function() {
         }
     });
 
-    // 3. Aylık Satış Trendi - Professional Multi-line Chart
+    // 3. Aylık Satış Trendi - DİNAMİK VERİ
     const aylikTrendData = {
         labels: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
         datasets: []
@@ -1163,7 +1636,7 @@ $(document).ready(function() {
     while($row = $yillik_aylik_result->fetch_assoc()) {
         $year = $row['yil'];
         $month = $row['ay'];
-        $revenue = $row['aylik_gelir'];
+        $revenue = $row['aylik_gelir'] ?: 0;
         echo "if (!monthlyDataByYear['$year']) monthlyDataByYear['$year'] = new Array(12).fill(null);\n";
         echo "monthlyDataByYear['$year'][" . ($month-1) . "] = $revenue;\n";
     }
@@ -1177,7 +1650,7 @@ $(document).ready(function() {
     };
 
     Object.keys(monthlyDataByYear).forEach(year => {
-        const style = yearStyles[year];
+        const style = yearStyles[year] || { color: '#667eea', gradient: 'rgba(102, 126, 234, 0.1)' };
         aylikTrendData.datasets.push({
             label: year + ' Yılı',
             data: monthlyDataByYear[year],
@@ -1209,10 +1682,7 @@ $(document).ready(function() {
                     position: 'top',
                     labels: {
                         padding: 20,
-                        font: {
-                            size: 12,
-                            weight: '600'
-                        },
+                        font: { size: 12, weight: '600' },
                         color: '#2c3e50',
                         usePointStyle: true,
                         pointStyle: 'circle'
@@ -1240,25 +1710,17 @@ $(document).ready(function() {
                     },
                     ticks: {
                         color: '#6c757d',
-                        font: {
-                            size: 11,
-                            weight: '500'
-                        },
+                        font: { size: 11, weight: '500' },
                         callback: function(value) {
                             return '₺' + (value/1000000).toFixed(1) + 'M';
                         }
                     }
                 },
                 x: {
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
                     ticks: {
                         color: '#6c757d',
-                        font: {
-                            size: 11,
-                            weight: '600'
-                        }
+                        font: { size: 11, weight: '600' }
                     }
                 }
             },
@@ -1269,52 +1731,42 @@ $(document).ready(function() {
         }
     });
 
-    // 4. Top Ürünler - Professional Horizontal Bar Chart
+    // 4. Top Ürünler - DİNAMİK VERİ
     const topUrunlerData = {
         labels: [],
         datasets: [{
             label: 'Satış (₺)',
             data: [],
-            backgroundColor: [
-                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#764ba2',
-                '#667eeaaa', '#f093fbaa', '#4facfeaa', '#43e97baa', '#764ba2aa'
-            ],
-            borderColor: [
-                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#764ba2',
-                '#667eea', '#f093fb', '#4facfe', '#43e97b', '#764ba2'
-            ],
+            backgroundColor: professionalColors.primary,
+            borderColor: professionalColors.primary,
             borderWidth: 2,
             borderRadius: 6,
             borderSkipped: false
         }]
     };
 
-    // Top ürünler verisi
     <?php 
     $top_urunler_result->data_seek(0);
     $urun_labels = [];
     $urun_data = [];
-    $count = 0;
-    echo "console.log('Top ürünler verisi:');\n";
-    while($row = $top_urunler_result->fetch_assoc() && $count < 8) {
-        $urun_labels[] = "'" . substr($row['urun_ad'], 0, 15) . "'";
+    $urun_details = [];
+    while($row = $top_urunler_result->fetch_assoc()) {
+        $urun_labels[] = "'" . substr($row['urun_ad'], 0, 20) . "'";
         $urun_data[] = $row['toplam_satis'] ?: 0;
-        echo "console.log('" . $row['urun_ad'] . ": " . $row['toplam_satis'] . "');\n";
-        $count++;
-    }
-    
-    // Eğer veri yoksa örnek veri ekle
-    if(empty($urun_labels)) {
-        echo "console.log('Top ürünler verisi bulunamadı, örnek veri ekleniyor...');\n";
-        $urun_labels = ["'WHISKEY JAMESON'", "'VODKA ABSOLUT'", "'Pepsi'", "'Türk Kahvesi'", "'TEQUILA OLMECA'", "'Filtre Kahve'", "'Craft Beer IPA'", "'Cold Brew Coffee'"];
-        $urun_data = [2470000, 2380000, 1880000, 1650000, 1420000, 1350000, 720000, 680000];
+        $urun_details[] = [
+            'urun_ad' => $row['urun_ad'],
+            'toplam_satis' => $row['toplam_satis'] ?: 0,
+            'toplam_adet' => $row['toplam_adet'] ?: 0,
+            'siparis_sayisi' => $row['siparis_sayisi'] ?: 0,
+            'kategori_ad' => $row['kategori_ad']
+        ];
     }
     ?>
 
     topUrunlerData.labels = [<?php echo implode(',', array_reverse($urun_labels)); ?>];
     topUrunlerData.datasets[0].data = [<?php echo implode(',', array_reverse($urun_data)); ?>];
     
-    console.log('Top Ürünler Data:', topUrunlerData);
+    const topUrunDetails = <?php echo json_encode(array_reverse($urun_details)); ?>;
 
     new Chart(document.getElementById('topUrunlerChart'), {
         type: 'bar',
@@ -1324,17 +1776,25 @@ $(document).ready(function() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
                     titleColor: '#ffffff',
                     bodyColor: '#ffffff',
                     cornerRadius: 10,
                     callbacks: {
+                        title: function(context) {
+                            const details = topUrunDetails[context[0].dataIndex];
+                            return details.urun_ad;
+                        },
                         label: function(context) {
-                            return 'Satış: ₺' + (context.parsed.x/1000000).toFixed(1) + 'M';
+                            const details = topUrunDetails[context.dataIndex];
+                            return [
+                                'Satış: ₺' + (context.parsed.x/1000000).toFixed(1) + 'M',
+                                'Sipariş Sayısı: ' + details.siparis_sayisi.toLocaleString(),
+                                'Toplam Adet: ' + details.toplam_adet.toLocaleString(),
+                                'Kategori: ' + details.kategori_ad
+                            ];
                         }
                     }
                 }
@@ -1348,25 +1808,17 @@ $(document).ready(function() {
                     },
                     ticks: {
                         color: '#6c757d',
-                        font: {
-                            size: 10,
-                            weight: '500'
-                        },
+                        font: { size: 10, weight: '500' },
                         callback: function(value) {
                             return '₺' + (value/1000000).toFixed(1) + 'M';
                         }
                     }
                 },
                 y: {
-                    grid: {
-                        display: false
-                    },
+                    grid: { display: false },
                     ticks: {
                         color: '#2c3e50',
-                        font: {
-                            size: 10,
-                            weight: '600'
-                        }
+                        font: { size: 10, weight: '600' }
                     }
                 }
             },
@@ -1377,6 +1829,44 @@ $(document).ready(function() {
         }
     });
 
+    // 5. Tedarikçi Performansı - DİNAMİK VERİ
+    const tedarikciData = {
+        labels: [],
+        datasets: [{
+            label: 'Gelir (₺)',
+            data: [],
+            backgroundColor: '#667eea',
+            borderColor: '#667eea',
+            borderWidth: 2,
+            borderRadius: 6,
+            borderSkipped: false
+        }]
+    };
+
+    <?php 
+    $firma_result->data_seek(0);
+    $tedarikci_labels = [];
+    $tedarikci_data = [];
+    $tedarikci_details = [];
+    while($row = $firma_result->fetch_assoc()) {
+        $tedarikci_labels[] = "'" . substr($row['firma_ad'], 0, 15) . "'";
+        $tedarikci_data[] = $row['toplam_gelir'] ?: 0;
+        $tedarikci_details[] = [
+            'firma_ad' => $row['firma_ad'],
+            'toplam_gelir' => $row['toplam_gelir'] ?: 0,
+            'siparis_sayisi' => $row['siparis_sayisi'] ?: 0,
+            'il_ad' => $row['il_ad'],
+            'kategori_ad' => $row['kategori_ad'],
+            'urun_cesidi' => $row['urun_cesidi'] ?: 0
+        ];
+    }
+    ?>
+
+    tedarikciData.labels = [<?php echo implode(',', $tedarikci_labels); ?>];
+    tedarikciData.datasets[0].data = [<?php echo implode(',', $tedarikci_data); ?>];
+    
+    const tedarikciDetails = <?php echo json_encode($tedarikci_details); ?>;
+
     new Chart(document.getElementById('tedarikciPerformansChart'), {
         type: 'bar',
         data: tedarikciData,
@@ -1384,17 +1874,26 @@ $(document).ready(function() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
                     titleColor: '#ffffff',
                     bodyColor: '#ffffff',
                     cornerRadius: 10,
                     callbacks: {
+                        title: function(context) {
+                            const details = tedarikciDetails[context[0].dataIndex];
+                            return details.firma_ad + ' (' + details.il_ad + ')';
+                        },
                         label: function(context) {
-                            return 'Gelir: ₺' + (context.parsed.y/1000000).toFixed(1) + 'M';
+                            const details = tedarikciDetails[context.dataIndex];
+                            return [
+                                'Gelir: ₺' + (context.parsed.y/1000000).toFixed(1) + 'M',
+                                'Sipariş Sayısı: ' + details.siparis_sayisi.toLocaleString(),
+                                'Ürün Çeşidi: ' + details.urun_cesidi,
+                                'Kategori: ' + details.kategori_ad,
+                                'Lokasyon: ' + details.il_ad
+                            ];
                         }
                     }
                 }
@@ -1408,25 +1907,17 @@ $(document).ready(function() {
                     },
                     ticks: {
                         color: '#6c757d',
-                        font: {
-                            size: 11,
-                            weight: '500'
-                        },
+                        font: { size: 11, weight: '500' },
                         callback: function(value) {
                             return '₺' + (value/1000000).toFixed(1) + 'M';
                         }
                     }
                 },
                 x: {
-                    grid: {
-                        display: false
-                    },
+                    grid: { display: false },
                     ticks: {
                         color: '#2c3e50',
-                        font: {
-                            size: 10,
-                            weight: '600'
-                        },
+                        font: { size: 10, weight: '600' },
                         maxRotation: 45
                     }
                 }
@@ -1437,13 +1928,6 @@ $(document).ready(function() {
             }
         }
     });
-
-    // Debugging için veri kontrolü
-    console.log('Grafik verileri yüklendi!');
-    console.log('Top Ürünler Labels:', topUrunlerData.labels);
-    console.log('Top Ürünler Data:', topUrunlerData.datasets[0].data);
-    console.log('Tedarikçi Labels:', tedarikciData.labels);
-    console.log('Tedarikçi Data:', tedarikciData.datasets[0].data);
 
     // Chart animations on scroll
     const observer = new IntersectionObserver((entries) => {
@@ -1458,7 +1942,14 @@ $(document).ready(function() {
         observer.observe(card);
     });
 
+    // Initialize activities
+    renderActivities();
+
     console.log('Professional KDS Dashboard başarıyla yüklendi!');
+    console.log('Dinamik veriler PHP\'den çekildi:');
+    console.log('- Kategori sayısı:', kategoriDetails.length);
+    console.log('- Top ürün sayısı:', topUrunDetails.length);
+    console.log('- Tedarikçi sayısı:', tedarikciDetails.length);
 });
 </script>
 
