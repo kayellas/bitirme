@@ -174,9 +174,9 @@
                     <span class="info-box-icon"><i class="fas fa-chart-area"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Büyüme Oranı</span>
-                        <span class="info-box-number" id="growthRate">-%</span>
+                        <span class="info-box-number" id="growthRate">53%</span>
                         <div class="progress">
-                            <div class="progress-bar" id="growthProgress" style="width: 0%"></div>
+                            <div class="progress-bar" id="growthProgress" style="width: 53%"></div>
                         </div>
                     </div>
                 </div>
@@ -502,7 +502,7 @@
                             <div class="small-box bg-gradient-success mb-2" style="border-radius: 8px;">
                                 <div class="inner p-2">
                                     <h6 class="mb-1" style="font-size: 0.8rem;">Toplam Büyüme</h6>
-                                    <h4 id="totalGrowthRate" style="font-size: 1.2rem;">+12.5%</h4>
+                                    <h4 id="totalGrowthRate" style="font-size: 1.2rem;">+53.5%</h4>
                                 </div>
                                 <div class="icon" style="top: 5px; right: 5px;">
                                     <i class="fas fa-arrow-up" style="font-size: 1rem;"></i>
